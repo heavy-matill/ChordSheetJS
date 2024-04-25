@@ -1,11 +1,12 @@
 /* eslint max-len: 0 */
-import Song from '../chord_sheet/song';
-import Line from '../chord_sheet/line';
-import ChordLyricsPair from '../chord_sheet/chord_lyrics_pair';
-import { deprecate, normalizeLineEndings } from '../utilities';
+import Song from "../chord_sheet/song";
+import Line from "../chord_sheet/line";
+import ChordLyricsPair from "../chord_sheet/chord_lyrics_pair";
+import { deprecate, normalizeLineEndings } from "../utilities";
 
 const WHITE_SPACE = /\s/;
-const CHORD_LINE_REGEX = /^\s*((([A-G|Do|Re|Mi|Fa|Sol|La|Si])(#|b)?([^/\s]*)(\/([A-G|Do|Re|Mi|Fa|Sol|La|Si])(#|b)?)?)(\s|$)+)+(\s|$)+/;
+const CHORD_LINE_REGEX =
+  /^\s*((([A-G|Do|Re|Mi|Fa|Sol|La|Si])(#|b)?([^/\s]*)(\/([A-G|Do|Re|Mi|Fa|Sol|La|Si])(#|b)?)?)(\s|$)+)+(\s|$)+/;
 
 /**
  * Parses a normal chord sheet
@@ -42,7 +43,7 @@ class ChordSheetParser {
    */
   constructor(
     { preserveWhitespace = true }: { preserveWhitespace?: boolean } = {},
-    showDeprecationWarning: boolean = true,
+    showDeprecationWarning: boolean = true
   ) {
     if (showDeprecationWarning) {
       deprecate(
@@ -50,7 +51,7 @@ class ChordSheetParser {
 
   ChordsOverWordsParser aims to support any kind of chord, whereas ChordSheetParser lacks
   support for many variations. Besides that, some chordpro feature have been ported back
-  to ChordsOverWordsParser, which adds some interesting functionality.`,
+  to ChordsOverWordsParser, which adds some interesting functionality.`
       );
     }
 
@@ -76,7 +77,7 @@ class ChordSheetParser {
     return this.song;
   }
 
-  endOfSong() { }
+  endOfSong() {}
 
   parseLine(line) {
     this.songLine = this.song.addLine();
@@ -89,13 +90,18 @@ class ChordSheetParser {
   }
 
   parseNonEmptyLine(line) {
-    if (!this.songLine) throw new Error('Expected this.songLine to be present');
+    if (!this.songLine) throw new Error("Expected this.songLine to be present");
 
     this.chordLyricsPair = this.songLine.addChordLyricsPair();
 
     if (CHORD_LINE_REGEX.test(line) && this.hasNextLine()) {
-      const nextLine = this.readLine();
-      this.parseLyricsWithChords(line, nextLine);
+      if (CHORD_LINE_REGEX.test(this.peekLine())) {
+        // this line and next line contains chords
+        this.parseLyricsWithChords(line, "");
+      } else {
+        const nextLine = this.readLine();
+        this.parseLyricsWithChords(line, nextLine);
+      }
     } else {
       this.chordLyricsPair.lyrics = `${line}`;
     }
@@ -106,10 +112,15 @@ class ChordSheetParser {
       this.song = song;
     }
 
-    this.lines = normalizeLineEndings(document).split('\n');
+    this.lines = normalizeLineEndings(document).split("\n");
     this.currentLine = 0;
     this.lineCount = this.lines.length;
     this.processingText = true;
+  }
+
+  peekLine() {
+    const line = this.lines[this.currentLine];
+    return line;
   }
 
   readLine() {
@@ -125,7 +136,8 @@ class ChordSheetParser {
   parseLyricsWithChords(chordsLine, lyricsLine) {
     this.processCharacters(chordsLine, lyricsLine);
 
-    if (!this.chordLyricsPair) throw new Error('Expected this.chordLyricsPair to be present');
+    if (!this.chordLyricsPair)
+      throw new Error("Expected this.chordLyricsPair to be present");
 
     this.chordLyricsPair.lyrics += lyricsLine.substring(chordsLine.length);
     this.chordLyricsPair.chords = this.chordLyricsPair.chords.trim();
@@ -146,9 +158,10 @@ class ChordSheetParser {
       const isWhiteSpace = WHITE_SPACE.test(chr);
       this.addCharacter(chr, nextChar);
 
-      if (!this.chordLyricsPair) throw new Error('Expected this.chordLyricsPair to be present');
+      if (!this.chordLyricsPair)
+        throw new Error("Expected this.chordLyricsPair to be present");
 
-      this.chordLyricsPair.lyrics += lyricsLine[c] || '';
+      this.chordLyricsPair.lyrics += lyricsLine[c] || "";
       this.processingText = !isWhiteSpace;
     }
   }
@@ -161,18 +174,20 @@ class ChordSheetParser {
     }
 
     if (!isWhiteSpace || this.shouldAddCharacterToChords(nextChar)) {
-      if (!this.chordLyricsPair) throw new Error('Expected this.chordLyricsPair to be present');
+      if (!this.chordLyricsPair)
+        throw new Error("Expected this.chordLyricsPair to be present");
       this.chordLyricsPair.chords += chr;
     }
   }
 
   shouldAddCharacterToChords(nextChar) {
-    return (nextChar && WHITE_SPACE.test(nextChar) && this.preserveWhitespace);
+    return nextChar && WHITE_SPACE.test(nextChar) && this.preserveWhitespace;
   }
 
   ensureChordLyricsPairInitialized() {
     if (!this.processingText) {
-      if (!this.songLine) throw new Error('Expected this.songLine to be present');
+      if (!this.songLine)
+        throw new Error("Expected this.songLine to be present");
       this.chordLyricsPair = this.songLine.addChordLyricsPair();
       this.processingText = true;
     }
