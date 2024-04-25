@@ -14,6 +14,9 @@ import Tag, {
 const VERSE_LINE_REGEX = /^\[(Verse.*)]/i;
 const CHORUS_LINE_REGEX = /^\[(Chorus)]/i;
 const OTHER_METADATA_LINE_REGEX = /^\[([^\]]+)]/;
+const CHORD_LINE_REGEX =
+  /^\s*((([A-G|Do|Re|Mi|Fa|Sol|La|Si])(#|b)?([^/\s]*)(\/([A-G|Do|Re|Mi|Fa|Sol|La|Si])(#|b)?)?)(\s|$)+)+(\s|$)+/;
+const REPETITION_REGEX = /([0-9]+x:*)|(x[0-9]+:*)/gm;
 
 const startSectionTags = {
   [VERSE]: START_OF_VERSE,
@@ -66,6 +69,20 @@ class UltimateGuitarParser extends ChordSheetParser {
       line.length - line.replaceAll("-", "").length > 5
     ) {
       this.writeTabLine(line);
+    } else if (CHORD_LINE_REGEX.test(line.replace(REPETITION_REGEX, "")) && line.match(REPETITION_REGEX)?.length) {
+      // chord line starting or ending with 2x x2 or similar
+      let rep_only = line.match(REPETITION_REGEX);
+      let chords_only = line.replace(
+        rep_only[0],
+        " ".repeat(rep_only[0].length)
+      );
+      this.startNewLine();
+      if (!this.songLine)
+        throw new Error("Expected this.songLine to be present");
+      this.songLine.addChordLyricsPair(
+        chords_only,
+        " ".repeat(chords_only.length) + rep_only[0].replace(":", "") // repetition text (e.g. 2x) as lyrics
+      );
     } else {
       super.parseLine(line);
     }

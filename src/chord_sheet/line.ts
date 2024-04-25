@@ -171,7 +171,7 @@ class Line {
     return this.hasRenderableItems();
   }
 
-  addChordLyricsPair(chords: ChordLyricsPair | string | null = null, lyrics = null): ChordLyricsPair {
+  addChordLyricsPair(chords: ChordLyricsPair | string | null = null, lyrics: string | null = null): ChordLyricsPair {
     if (chords instanceof ChordLyricsPair) {
       this.currentChordLyricsPair = chords;
     } else {
