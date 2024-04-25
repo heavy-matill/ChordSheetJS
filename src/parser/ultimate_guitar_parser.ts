@@ -1,13 +1,15 @@
-import { CHORUS, NONE, VERSE } from '../constants';
-import ChordSheetParser from './chord_sheet_parser';
+import { CHORUS, NONE, TAB, VERSE } from "../constants";
+import ChordSheetParser from "./chord_sheet_parser";
 
 import Tag, {
   COMMENT,
   END_OF_CHORUS,
+  END_OF_TAB,
   END_OF_VERSE,
   START_OF_CHORUS,
+  START_OF_TAB,
   START_OF_VERSE,
-} from '../chord_sheet/tag';
+} from "../chord_sheet/tag";
 
 const VERSE_LINE_REGEX = /^\[(Verse.*)]/i;
 const CHORUS_LINE_REGEX = /^\[(Chorus)]/i;
@@ -16,11 +18,13 @@ const OTHER_METADATA_LINE_REGEX = /^\[([^\]]+)]/;
 const startSectionTags = {
   [VERSE]: START_OF_VERSE,
   [CHORUS]: START_OF_CHORUS,
+  [TAB]: START_OF_TAB,
 };
 
 const endSectionTags = {
   [VERSE]: END_OF_VERSE,
   [CHORUS]: END_OF_CHORUS,
+  [TAB]: END_OF_TAB,
 };
 
 /**
@@ -35,7 +39,9 @@ class UltimateGuitarParser extends ChordSheetParser {
    * @param {Object} [options={}] options
    * @param {boolean} [options.preserveWhitespace=true] whether to preserve trailing whitespace for chords
    */
-  constructor({ preserveWhitespace = true }: { preserveWhitespace?: boolean } = {}) {
+  constructor({
+    preserveWhitespace = true,
+  }: { preserveWhitespace?: boolean } = {}) {
     super({ preserveWhitespace }, false);
   }
 
@@ -54,6 +60,12 @@ class UltimateGuitarParser extends ChordSheetParser {
       this.startSection(CHORUS, label);
     } else if (OTHER_METADATA_LINE_REGEX.test(line)) {
       this.parseMetadataLine(line);
+    } else if (
+      // check if line has many dashes
+      line.length > 8 &&
+      line.length - line.replaceAll("-", "").length > 5
+    ) {
+      this.writeTabLine(line);
     } else {
       super.parseLine(line);
     }
@@ -64,27 +76,42 @@ class UltimateGuitarParser extends ChordSheetParser {
     this.endSection();
     const comment = line.match(OTHER_METADATA_LINE_REGEX)[1];
 
-    if (!this.songLine) throw new Error('Expected this.songLine to be present');
+    if (!this.songLine) throw new Error("Expected this.songLine to be present");
 
     this.songLine.addTag(new Tag(COMMENT, comment));
   }
 
   isSectionEnd(): boolean {
-    return this.songLine !== null
-      && this.songLine.isEmpty()
-      && this.song.previousLine !== null
-      && !this.song.previousLine.isEmpty();
+    return (
+      this.songLine !== null &&
+      this.songLine.isEmpty() &&
+      this.song.previousLine !== null &&
+      !this.song.previousLine.isEmpty()
+    );
   }
 
   endOfSong() {
     super.endOfSong();
-    if (this.currentSectionType !== null && this.currentSectionType in endSectionTags) {
+    if (
+      this.currentSectionType !== null &&
+      this.currentSectionType in endSectionTags
+    ) {
       this.startNewLine();
     }
     this.endSection({ addNewLine: false });
   }
 
-  startSection(sectionType: 'verse' | 'chorus', label: string) {
+  writeTabLine(line) {
+    this.startNewLine();
+    if (this.currentSectionType != TAB) {
+      this.startNewLine();
+      this.startSection(TAB);
+    }
+    if (!this.songLine) throw new Error("Expected this.songLine to be present");
+    this.songLine.addChordLyricsPair(null, line);
+  }
+
+  startSection(sectionType: "verse" | "chorus" | "tab", label: string = "") {
     if (this.currentSectionType) {
       this.endSection();
     }
@@ -98,7 +125,10 @@ class UltimateGuitarParser extends ChordSheetParser {
   }
 
   endSection({ addNewLine = true } = {}) {
-    if (this.currentSectionType !== null && this.currentSectionType in endSectionTags) {
+    if (
+      this.currentSectionType !== null &&
+      this.currentSectionType in endSectionTags
+    ) {
       this.song.addTag(new Tag(endSectionTags[this.currentSectionType]));
 
       if (addNewLine) {
