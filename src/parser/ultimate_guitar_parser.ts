@@ -121,6 +121,7 @@ class UltimateGuitarParser extends ChordSheetParser {
   writeTabLine(line) {
     this.startNewLine();
     if (this.currentSectionType != TAB) {
+      this.startNewLine();
       this.startSection(TAB);
     }
     if (!this.songLine) throw new Error("Expected this.songLine to be present");
