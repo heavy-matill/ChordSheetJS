@@ -16,6 +16,7 @@ const CHORUS_LINE_REGEX = /^\[(Chorus)]/i;
 const OTHER_METADATA_LINE_REGEX = /^\[([^\]]+)]/;
 const CHORD_LINE_REGEX =
   /^\s*((([A-G|Do|Re|Mi|Fa|Sol|La|Si])(#|b)?([^/\s]*)(\/([A-G|Do|Re|Mi|Fa|Sol|La|Si])(#|b)?)?)(\s|$)+)+(\s|$)+/;
+const TAB_REGEX = /[0-9\-\/\\|xX]{8,}/;
 const REPETITION_REGEX = /([0-9]+x:*)|(x[0-9]+:*)/gm;
 
 const startSectionTags = {
@@ -63,13 +64,12 @@ class UltimateGuitarParser extends ChordSheetParser {
       this.startSection(CHORUS, label);
     } else if (OTHER_METADATA_LINE_REGEX.test(line)) {
       this.parseMetadataLine(line);
-    } else if (
-      // check if line has many dashes
-      line.length > 8 &&
-      line.length - line.replaceAll("-", "").length > 5
-    ) {
+    } else if (TAB_REGEX.test(line)) {
       this.writeTabLine(line);
-    } else if (CHORD_LINE_REGEX.test(line.replace(REPETITION_REGEX, "")) && line.match(REPETITION_REGEX)?.length) {
+    } else if (
+      CHORD_LINE_REGEX.test(line.replace(REPETITION_REGEX, "")) &&
+      line.match(REPETITION_REGEX)?.length
+    ) {
       // chord line starting or ending with 2x x2 or similar
       let rep_only = line.match(REPETITION_REGEX);
       let chords_only = line.replace(
@@ -79,10 +79,10 @@ class UltimateGuitarParser extends ChordSheetParser {
       this.startNewLine();
       if (!this.songLine)
         throw new Error("Expected this.songLine to be present");
-      this.songLine.addChordLyricsPair(
-        chords_only,
-        " ".repeat(chords_only.length) + rep_only[0].replace(":", "") // repetition text (e.g. 2x) as lyrics
-      );
+      this.songLine.addChordLyricsPair(chords_only, null);
+      this.songLine.lyrics(
+        " ".repeat(chords_only.length) + rep_only[0].replace(":", "")
+      ); // repetition text (e.g. 2x) as lyrics)
     } else {
       super.parseLine(line);
     }
@@ -121,7 +121,6 @@ class UltimateGuitarParser extends ChordSheetParser {
   writeTabLine(line) {
     this.startNewLine();
     if (this.currentSectionType != TAB) {
-      this.startNewLine();
       this.startSection(TAB);
     }
     if (!this.songLine) throw new Error("Expected this.songLine to be present");
