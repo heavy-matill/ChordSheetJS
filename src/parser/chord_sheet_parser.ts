@@ -97,7 +97,7 @@ class ChordSheetParser {
     if (CHORD_LINE_REGEX.test(line) && this.hasNextLine()) {
       if (CHORD_LINE_REGEX.test(this.peekLine())) {
         // this line and next line contains chords
-        this.parseLyricsWithChords(line, "");
+        this.parseLyricsWithChords(line, null);
       } else {
         const nextLine = this.readLine();
         this.parseLyricsWithChords(line, nextLine);

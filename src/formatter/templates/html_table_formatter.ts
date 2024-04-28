@@ -45,7 +45,7 @@ export default (
           ${ when(paragraph.isLiteral(), () => `
             <table class="literal">
               <tr>
-                <td class="label">${ paragraph.label }</td>
+                <td class="label">${ paragraph.label || ''}</td>
                 <td class="contents">${ newlinesToBreaks(renderSection(paragraph, configuration)) }</td>
               </tr>
             </table>
